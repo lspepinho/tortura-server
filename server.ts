@@ -147,6 +147,10 @@ io.on('connection', (socket: Socket) => {
       ...action,
     });
   });
+  socket.on('fighter_snapshot', (snap) => {
+    if (!currentRoomCode) return;
+    socket.to(currentRoomCode).emit('remote_fighter_snapshot', snap);
+  });
   socket.on('sync_game_state', (state) => {
     if (!currentRoomCode) return;
     const room = rooms.get(currentRoomCode);
