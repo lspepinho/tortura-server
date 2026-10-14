@@ -196,7 +196,12 @@ io.on('connection', (socket: Socket) => {
   socket.on('round_finished', ({ winnerSlot }: { winnerSlot: 1 | 2 }) => {
     if (!currentRoomCode) return;
     const room = rooms.get(currentRoomCode);
-    if (!room || room.hostId !== socket.id) return;
+    if (!room) return;
+    const me = room.players[socket.id];
+    if (!me || !me.connected) return;
+    if (room.gameState !== 'playing') return;
+    if (winnerSlot !== 1 && winnerSlot !== 2) return;
+    room.gameState = 'round_over';
     room.roundWinnerSlot = winnerSlot;
     for (const pid of Object.keys(room.players)) {
       if (room.players[pid].slot === winnerSlot) {
@@ -204,7 +209,8 @@ io.on('connection', (socket: Socket) => {
       }
       room.players[pid].ready = false;
     }
-    const hasWonMatch = Object.values(room.players).filter((p) => p.connected).some(p => p.score >= room.maxRounds);
+    const needed = Math.ceil(room.maxRounds / 2);
+    const hasWonMatch = Object.values(room.players).filter((p) => p.connected).some(p => p.score >= needed);
     if (hasWonMatch) {
       room.gameState = 'game_over';
       io.to(currentRoomCode).emit('match_over', {
